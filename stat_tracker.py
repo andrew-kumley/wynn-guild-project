@@ -2,7 +2,6 @@ import requests
 import os
 from time import sleep
 from time import time
-from datetime import datetime
 from dotenv import load_dotenv
 import mysql.connector
 
@@ -39,9 +38,8 @@ def main():
             unix = time()
             # iterating through each rank and then each member of that rank to access their stats and save them to the player_stats dictionary
             for rank in keys:
-                members += data["members"][rank]
 
-                for member in members:
+                for member in data['members'][rank]:
                     xp = data['members'][rank][member]['contributed']
                     notg = data['members'][rank][member]['guildRaids']['list']['Nest of the Grootslangs']
                     nol = data['members'][rank][member]['guildRaids']['list']['Orphion\'s Nexus of Light']
@@ -51,7 +49,8 @@ def main():
                     cursor.execute('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna) VALUES (%s, %s, %s, %s, %s, %s, %s)', (unix, member, xp, notg, nol, tcc, tna))
                     conn.commit()
 
-                members = []
+                    cursor.execute('DELETE FROM player_stats WHERE date < %s', (unix - 1209600,))
+                    conn.commit()
         else:
             print(f"Error: {response.status_code}")
 
