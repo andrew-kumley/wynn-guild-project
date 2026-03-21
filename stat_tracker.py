@@ -27,15 +27,22 @@ def main():
 
     # main loop, runs every 2 minutes to update player stats
     while True:
-        response = requests.get(url, headers=headers)
+
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"Request failed: {e}")
+            sleep(120)
+            continue
 
         if response.status_code == 200:
             data = response.json()
-            members = []
 
             # ranks in the guild, used to access the members of each rank and their stats
             keys = ['owner', 'chief', 'strategist', 'captain', 'recruiter', 'recruit']
             unix = time()
+
             # iterating through each rank and then each member of that rank to access their stats and save them to the player_stats dictionary
             for rank in keys:
 
@@ -46,14 +53,16 @@ def main():
                     tcc = data['members'][rank][member]['guildRaids']['list']['The Canyon Colossus']
                     tna = data['members'][rank][member]['guildRaids']['list']['The Nameless Anomaly']
 
-                    cursor.execute('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna) VALUES (%s, %s, %s, %s, %s, %s, %s)', (unix, member, xp, notg, nol, tcc, tna))
-                    conn.commit()
+                    try:
+                        cursor.execute('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna) VALUES (%s, %s, %s, %s, %s, %s, %s)', (unix, member, xp, notg, nol, tcc, tna))
+                        cursor.execute('DELETE FROM player_stats WHERE date < %s', (unix - 1209600,))
 
-                    cursor.execute('DELETE FROM player_stats WHERE date < %s', (unix - 1209600,))
-                    conn.commit()
+                    except mysql.connector.Error as err:
+                        print(f"Database error: {err}")
         else:
             print(f"Error: {response.status_code}")
-
+        
+        conn.commit()
         sleep(120)
 
 main()
