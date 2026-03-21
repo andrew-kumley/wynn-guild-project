@@ -43,6 +43,8 @@ def main():
             keys = ['owner', 'chief', 'strategist', 'captain', 'recruiter', 'recruit']
             unix = time()
 
+            rows = []
+
             # iterating through each rank and then each member of that rank to access their stats and save them to the player_stats dictionary
             for rank in keys:
 
@@ -52,16 +54,17 @@ def main():
                     nol = data['members'][rank][member]['guildRaids']['list']['Orphion\'s Nexus of Light']
                     tcc = data['members'][rank][member]['guildRaids']['list']['The Canyon Colossus']
                     tna = data['members'][rank][member]['guildRaids']['list']['The Nameless Anomaly']
+                    rows.append((unix, member, xp, notg, nol, tcc, tna))
 
-                    try:
-                        cursor.execute('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna) VALUES (%s, %s, %s, %s, %s, %s, %s)', (unix, member, xp, notg, nol, tcc, tna))
-                        cursor.execute('DELETE FROM player_stats WHERE date < %s', (unix - 1209600,))
-
-                    except mysql.connector.Error as err:
-                        print(f"Database error: {err}")
         else:
             print(f"Error: {response.status_code}")
         
+        try:
+            cursor.executemany('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna) VALUES (%s, %s, %s, %s, %s, %s, %s)', rows)
+            cursor.execute('DELETE FROM player_stats WHERE date < %s', (unix - 1209600,))
+        except mysql.connector.Error as err:
+            print(f"Database error: {err}")
+
         conn.commit()
         sleep(120)
 
