@@ -20,7 +20,7 @@ class logic:
     def get_all_player_diffs(self):
         try:
             self.cursor.execute("""
-                SELECT name, xp_diff, notg_diff, nol_diff, tcc_diff, tna_diff, wtp_diff, playtime_diff, wars_diff
+                SELECT name, xp_diff, notg_diff, nol_diff, tcc_diff, tna_diff, wtp_diff
                 FROM (
                     SELECT 
                         name,
@@ -30,8 +30,6 @@ class logic:
                         tcc - LAG(tcc) OVER (PARTITION BY name ORDER BY date) AS tcc_diff,
                         tna - LAG(tna) OVER (PARTITION BY name ORDER BY date) AS tna_diff,
                         wtp - LAG(wtp) OVER (PARTITION BY name ORDER BY date) AS wtp_diff,
-                        playtime - LAG(playtime) OVER (PARTITION BY name ORDER BY date) AS playtime_diff,
-                        wars - LAG(wars) OVER (PARTITION BY name ORDER BY date) AS wars_diff,
                         ROW_NUMBER() OVER (PARTITION BY name ORDER BY date DESC) AS rn
                     FROM player_stats
                 ) t
@@ -50,8 +48,6 @@ class logic:
                     "tcc": row[4] or 0,
                     "tna": row[5] or 0,
                     "wtp": row[6] or 0,
-                    "playtime": row[7] or 0,
-                    "wars": row[8] or 0,
                 })
 
             return players
@@ -59,6 +55,3 @@ class logic:
         except mysql.connector.Error as err:
             print(f"Database error: {err}")
             return []
-
-l = logic()
-print(l.get_all_player_diffs())
