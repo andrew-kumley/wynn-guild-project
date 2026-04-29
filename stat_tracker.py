@@ -6,9 +6,8 @@ from dotenv import load_dotenv
 import mysql.connector
 
 def main():
-
     load_dotenv()
-    # environment variables, may be edited locally or in the .env file
+    
     token = os.getenv("TOKEN")
     guild = os.getenv("GUILD")
     headers = {
@@ -25,9 +24,7 @@ def main():
 
     cursor = conn.cursor(buffered=True)
 
-    # main loop, runs every 2 minutes to update player stats
     while True:
-
         try:
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
@@ -39,28 +36,37 @@ def main():
         if response.status_code == 200:
             data = response.json()
 
-            # ranks in the guild, used to access the members of each rank and their stats
             keys = ['owner', 'chief', 'strategist', 'captain', 'recruiter', 'recruit']
             unix = time()
 
             rows = []
-
-            # iterating through each rank and then each member of that rank to access their stats and save them to the player_stats dictionary
             for rank in keys:
-
                 for member in data['members'][rank]:
                     xp = data['members'][rank][member]['contributed']
-                    notg = data['members'][rank][member]['guildRaids']['list']['Nest of the Grootslangs']
-                    nol = data['members'][rank][member]['guildRaids']['list']['Orphion\'s Nexus of Light']
-                    tcc = data['members'][rank][member]['guildRaids']['list']['The Canyon Colossus']
-                    tna = data['members'][rank][member]['guildRaids']['list']['The Nameless Anomaly']
-                    rows.append((unix, member, xp, notg, nol, tcc, tna))
+                    try:
+                        notg = data['members'][rank][member]['globalData']['guildRaids']['list']['Nest of the Grootslangs']
+                        nol = data['members'][rank][member]['globalData']['guildRaids']['list']['Orphion\'s Nexus of Light']
+                        tcc = data['members'][rank][member]['globalData']['guildRaids']['list']['The Canyon Colossus']
+                        tna = data['members'][rank][member]['globalData']['guildRaids']['list']['The Nameless Anomaly']
+                        wtp = data['members'][rank][member]['globalData']['guildRaids']['list']['The Wartorn Palace']
+                        playtime = data['members'][rank][member]['globalData']['playtime']
+                        wars = data['members'][rank][member]['globalData']['wars']
+                    except KeyError:
+                        notg = None
+                        nol = None
+                        tcc = None
+                        tna = None
+                        wtp = None
+                        playtime = None
+                        wars = None
+                    
+                    rows.append((unix, member, xp, notg, nol, tcc, tna, wtp, playtime, wars))
 
         else:
             print(f"Error: {response.status_code}")
         
         try:
-            cursor.executemany('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna) VALUES (%s, %s, %s, %s, %s, %s, %s)', rows)
+            cursor.executemany('INSERT INTO player_stats (date, name, xp, notg, nol, tcc, tna, wtp, playtime, wars) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', rows)
             cursor.execute('DELETE FROM player_stats WHERE date < %s', (unix - 1209600,))
         except mysql.connector.Error as err:
             print(f"Database error: {err}")
